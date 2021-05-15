@@ -20,13 +20,13 @@ else:
     from src.data_processing import data_preprocess_test
 
 
-def decode_img(img_path, img_width, img_height, num_channels):
+def decode_img(img_path, img_height, img_width, num_channels):
     """ Reads and converts images
 
     Args:
         img_path (tf.image): Input image
-        img_width (int): Image width
         img_height (int): Image height
+        img_width (int): Image width
         num_channels (int): Number of channels on the images
     Returns:
         img (tf.image): Image after preprocessing
@@ -45,16 +45,16 @@ def decode_img(img_path, img_width, img_height, num_channels):
     return img
 
 
-def model_predict(model_path, img_path, img_width, img_height, num_channels, class_names=None):
+def model_predict(model_path, img_path, img_height, img_width, num_channels, class_names=None):
     """ Classifies a single image
 
     Args:
         model_path (tf.h5): CNN model to be trained
         img_path (str): Path to the image. Preferably .jpg or .png
-        img_width (int): Image width
         img_height (int): Image height
+        img_width (int): Image width
         num_channels (int): Number of channels on the images
-        class_names (list of str):
+        class_names (list of str): List of classes
 
     Returns:
 
@@ -74,45 +74,47 @@ def model_predict(model_path, img_path, img_width, img_height, num_channels, cla
         return prediction
 
 
-def confusion_matrix_gerenate(y_true, y_pred, class_names, normalized=False):
+def confusion_matrix_generate(y_true, y_pred, class_names, normalize=False):
     """ Generates a confusion matrix
 
     Args:
-        y_true: list of true labels
-        y_pred: list of predicted labels
-        class_names: list of classe names
-        normalized (bool):
+        y_true (list of str): list of true labels
+        y_pred (list of str): list of predicted labels
+        class_names (list of str): list of classe names
+        normalize (bool): If True then the object returned will contain the relative frequencies of the unique values.
 
     Returns:
-
+        conf_matrix: The confusion matrix
     """
 
     conf_matrix = confusion_matrix(y_true, y_pred, labels=class_names)
-    if normalized:
+    if normalize:
         conf_matrix = conf_matrix / conf_matrix.astype(np.float).sum(axis=1)
 
     sns.heatmap(conf_matrix, cbar=False, cmap='Blues', xticklabels=class_names, yticklabels=class_names, annot=True)
-    plt.ylabel('Classe verdadeira')
-    plt.xlabel('Classe prevista')
+    plt.ylabel('True class')
+    plt.xlabel('Predicted class')
     plt.savefig('tests/confusion_matrix.png')
 
     return conf_matrix
 
 
-def model_evaluate(model_path, input_path, img_height, img_width, num_channels, class_names):
+def model_evaluate(model_path, input_path, img_height, img_width, num_channels, class_names=None):
     """
 
     Args:
-        model_path:
-        input_path:
-        img_height:
-        img_width:
-        num_channels:
-        class_names:
+        model_path (tf.h5): CNN model to be trained
+        input_path (str): Path to the folder containing test images
+        img_height (int): Image height
+        img_width (int): Image width
+        num_channels (int): Number of channels on the images
+        class_names (list of str): List of classes
 
     Returns:
 
     """
+    # Class names based on the directory structure
+    class_names = os.listdir(input_path)
 
     # load model
     model = load_model(model_path)
@@ -128,7 +130,7 @@ def model_evaluate(model_path, input_path, img_height, img_width, num_channels, 
     y_true = class_names[y_true.numpy()]
     y_pred = class_names[y_pred.numpy()]
 
-    conf_matrix = confusion_matrix_gerenate(y_true, y_pred, class_names)
+    conf_matrix = confusion_matrix_generate(y_true, y_pred, class_names)
     class_report = classification_report(y_true, y_pred, output_dict=True)
     pd.DataFrame(class_report).transpose().to_csv('classification_report.csv')
     class_report = classification_report(y_true, y_pred, output_dict=False)

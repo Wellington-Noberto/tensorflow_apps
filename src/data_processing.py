@@ -27,8 +27,8 @@ def decode_img(img, img_height, img_width, num_channels):
 
     Args:
         img (tf.image): Input image
-        img_width (int): Image width
         img_height (int): Image height
+        img_width (int): Image width
         num_channels (int): Number of channels on the images
     Returns:
         img (tf.image): Image after preprocessing
@@ -48,8 +48,8 @@ def process_path(file_path, class_names, img_height, img_width, num_channels):
     Args:
         file_path (str): Path of the input image
         class_names (list of str): List of strings containing each class of the input folders
-        img_width (int): Image width
         img_height (int): Image height
+        img_width (int): Image width
         num_channels (int): Number of channels on the images
     Returns:
         img (tf.image): Input image
@@ -78,14 +78,14 @@ def augment(img, label):
     # Rotate
     img = tf.image.rot90(img, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32))
     # Flip
-    # img = tf.image.random_flip_left_right(img)
-    # img = tf.image.random_flip_up_down(img)
+    img = tf.image.random_flip_left_right(img)
+    img = tf.image.random_flip_up_down(img)
     # Contrast
-    # img = tf.image.random_contrast(img, 0.8, 1.3)
+    img = tf.image.random_contrast(img, 0.8, 1.3)
     # Saturation
-    # img = tf.image.random_saturation(img, 0.6, 1.3)
+    img = tf.image.random_saturation(img, 0.6, 1.3)
     # Brightness
-    # img = tf.image.random_brightness(img, 0.1)
+    img = tf.image.random_brightness(img, 0.1)
 
     return (img, label)
 
@@ -124,7 +124,7 @@ def prepare_for_training(ds, batch_size, cache=True, shuffle_buffer_size=1000):
     return ds
 
 
-def data_preprocess(input_path, img_height, img_width, num_channels, batch_size, val_batch_size, class_names):
+def data_preprocess(input_path, img_height, img_width, num_channels, batch_size, val_batch_size, class_names=None):
     """ Prepare the dataset for training validation and test
 
     Args:
@@ -142,6 +142,8 @@ def data_preprocess(input_path, img_height, img_width, num_channels, batch_size,
         num_training_steps (int): Number of training steps per epoch
         num_val_steps (int): Number of steps during validation
     """
+    # Class names based on the directory structure
+    class_names = os.listdir(input_path)
 
     train_dir = pathlib.Path(os.path.join(input_path, 'train_images'))
     val_dir = pathlib.Path(os.path.join(input_path, 'val_images'))
@@ -166,7 +168,7 @@ def data_preprocess(input_path, img_height, img_width, num_channels, batch_size,
     return train_batches, val_batches, num_training_steps, num_val_steps
 
 
-def data_preprocess_test(test_path, img_height, img_width, num_channels, class_names):
+def data_preprocess_test(test_path, img_height, img_width, num_channels, class_names=None):
     """ Prepare the dataset for training validation and test
 
     Args:
@@ -178,6 +180,9 @@ def data_preprocess_test(test_path, img_height, img_width, num_channels, class_n
     Returns:
         test_data (tf.Dataset): Batches of test images
     """
+    # Class names based on the directory structure
+    class_names = os.listdir(test_path)
+
     test_dir = pathlib.Path(os.path.join(os.getcwd(), test_path))
     test_ds = tf.data.Dataset.list_files(str(test_dir / '*/*'))
     test_data = test_ds.map(lambda file_path: process_path(file_path, class_names, img_width, img_height, num_channels),
