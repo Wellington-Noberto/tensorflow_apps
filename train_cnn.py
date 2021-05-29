@@ -26,7 +26,7 @@ def main():
                                                                                     args['val_batch_size'],
                                                                                     args['class_names'])
 
-    train_model(args['model_path'], train_batches, args['epochs'], val_batches, num_training_steps, num_val_steps)
+    train_model(args['model_path'], args['epochs'], train_batches, val_batches, num_training_steps, num_val_steps)
 
 
 if __name__ == '__main__':

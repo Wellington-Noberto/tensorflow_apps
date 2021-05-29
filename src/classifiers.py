@@ -3,6 +3,8 @@ import time
 
 import tensorflow as tf
 # Keras
+from keras import Input, Model
+from keras.layers import add, Conv2D, BatchNormalization, Activation, SeparableConv2D, MaxPooling2D, Conv2DTranspose, UpSampling2D
 
 import coremltools
 from src.data_io import split_images
@@ -34,7 +36,7 @@ def keras_callbacks(model_path):
     return my_callbacks
 
 
-def train_model(model_path, train_data, epochs, validation_batches, num_training_steps, num_val_steps):
+def train_model(model_path, train_data, validation_batches, epochs, num_training_steps, num_val_steps):
     """ Trains the CNN model
 
     Args:
@@ -58,6 +60,65 @@ def train_model(model_path, train_data, epochs, validation_batches, num_training
               callbacks=my_callbacks,
               verbose=1
               )
+
+
+def get_model(img_size, num_classes):
+
+    inputs = Input(shape=img_size + (3,))
+
+    ### [First half of the network: downsampling inputs] ###
+
+    # Entry block
+    x = Conv2D(32, 3, strides=2, padding="same")(inputs)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
+
+    previous_block_activation = x  # Set aside residual
+
+    # Blocks 1, 2, 3 are identical apart from the feature depth.
+    for filters in [64, 128, 256]:
+        x = Activation("relu")(x)
+        x = SeparableConv2D(filters, 3, padding="same")(x)
+        x = BatchNormalization()(x)
+
+        x = Activation("relu")(x)
+        x = SeparableConv2D(filters, 3, padding="same")(x)
+        x = BatchNormalization()(x)
+
+        x = MaxPooling2D(3, strides=2, padding="same")(x)
+
+        # Project residual
+        residual = Conv2D(filters, 1, strides=2, padding="same")(
+            previous_block_activation
+        )
+        x = add([x, residual])  # Add back residual
+        previous_block_activation = x  # Set aside next residual
+
+    ### [Second half of the network: upsampling inputs] ###
+
+    for filters in [256, 128, 64, 32]:
+        x = Activation("relu")(x)
+        x = Conv2DTranspose(filters, 3, padding="same")(x)
+        x = BatchNormalization()(x)
+
+        x = Activation("relu")(x)
+        x = Conv2DTranspose(filters, 3, padding="same")(x)
+        x = BatchNormalization()(x)
+
+        x = UpSampling2D(2)(x)
+
+        # Project residual
+        residual = UpSampling2D(2)(previous_block_activation)
+        residual = Conv2D(filters, 1, padding="same")(residual)
+        x = add([x, residual])  # Add back residual
+        previous_block_activation = x  # Set aside next residual
+
+    # Add a per-pixel classification layer
+    outputs = Conv2D(num_classes, 3, activation="softmax", padding="same")(x)
+
+    # Define the model
+    model = Model(inputs, outputs)
+    model.save('unet.h5')
 
 
 def convert_cnn(model_path, model_format):
