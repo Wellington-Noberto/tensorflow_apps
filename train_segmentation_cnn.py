@@ -6,7 +6,7 @@ from src.classifiers import train_model
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('-model', '--model_path', help='Path to the keras model', default='unet.h5')
+    ap.add_argument('-model', '--model_path', help='Path to the keras model', default='unet_mobile_v2.h5')
     ap.add_argument('-i', '--input_path', help='Directory containing all images', default='oxford_iiit_pet:3.*.*')
     ap.add_argument('-e', '--epochs', help='Number of epochs during training', default=100)
     ap.add_argument('-height', '--img_height', help='Images height', default=128)
@@ -28,7 +28,8 @@ def main():
                 test_batches,
                 args['epochs'],
                 num_training_steps,
-                num_test_steps)
+                num_test_steps,
+                sparse_loss=True)
 
 
 if __name__ == '__main__':

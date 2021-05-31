@@ -4,7 +4,8 @@ import time
 import tensorflow as tf
 # Keras
 from keras import Input, Model
-from keras.layers import add, Conv2D, BatchNormalization, Activation, SeparableConv2D, MaxPooling2D, Conv2DTranspose, UpSampling2D
+from keras.layers import add, Conv2D, BatchNormalization, Activation, SeparableConv2D, MaxPooling2D, Conv2DTranspose, \
+    UpSampling2D
 
 import coremltools
 from src.data_io import split_images
@@ -36,7 +37,7 @@ def keras_callbacks(model_path):
     return my_callbacks
 
 
-def train_model(model_path, train_data, validation_batches, epochs, num_training_steps, num_val_steps):
+def train_model(model_path, train_data, validation_batches, epochs, num_training_steps, num_val_steps, sparse_loss):
     """ Trains the CNN model
 
     Args:
@@ -46,10 +47,15 @@ def train_model(model_path, train_data, validation_batches, epochs, num_training
         validation_batches (tf.Dataset): Batches of validation images
         num_training_steps (int): Number of training steps per epoch
         num_val_steps (int): Number of steps during validation
+        sparse_loss (bool):
     """
     model = tf.keras.models.load_model(model_path)
-    model_name = os.path.basename(model_path)[:-3]
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    if sparse_loss:
+        loss = 'sparse_categorical_crossentropy'
+    else:
+        loss = 'categorical_crossentropy'
+
+    model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
     my_callbacks = keras_callbacks(model_path)
 
     model.fit(train_data,
@@ -63,7 +69,6 @@ def train_model(model_path, train_data, validation_batches, epochs, num_training
 
 
 def get_model(img_size, num_classes):
-
     inputs = Input(shape=img_size + (3,))
 
     ### [First half of the network: downsampling inputs] ###
@@ -119,6 +124,102 @@ def get_model(img_size, num_classes):
     # Define the model
     model = Model(inputs, outputs)
     model.save('unet.h5')
+
+
+def up_sample(filters, filter_size, norm_type='batchnorm', apply_dropout=False):
+    """ Upsamples an input.
+    Conv2DTranspose => Batchnorm => Dropout => Relu
+    Args:
+        filters (int): number of filters
+        filter_size (int): filter size
+        norm_type (str): Normalization type; either 'batchnorm' or 'instancenorm'.
+        apply_dropout (bool): If True, adds the dropout layer
+    Returns:
+        up_sample_layer: Upsample Sequential Model
+    """
+
+    kernel_initializer = tf.random_normal_initializer(0., 0.02)
+
+    up_sample_layer = tf.keras.Sequential()
+    up_sample_layer.add(tf.keras.layers.Conv2DTranspose(filters,
+                                                        filter_size,
+                                                        strides=2,
+                                                        padding='same',
+                                                        kernel_initializer=kernel_initializer,
+                                                        use_bias=False))
+
+    if norm_type.lower() == 'batchnorm':
+        up_sample_layer.add(tf.keras.layers.BatchNormalization())
+
+    # elif norm_type.lower() == 'instancenorm':
+    #    result.add(InstanceNormalization())
+
+    if apply_dropout:
+        up_sample_layer.add(tf.keras.layers.Dropout(0.5))
+
+    up_sample_layer.add(tf.keras.layers.ReLU())
+
+    return up_sample_layer
+
+
+def unet_mobilenet(img_height, img_width, input_channels, output_channels):
+    """
+    Args:
+        img_height:
+        img_width:
+        input_channels:
+        output_channels:
+
+    Returns:
+
+    """
+
+    FILTER_SIZE = 3
+    layer_names = (
+        'block_1_expand_relu',  # 64x64
+        'block_3_expand_relu',  # 32x32
+        'block_6_expand_relu',  # 16x16
+        'block_13_expand_relu',  # 8x8
+        'block_16_project',  # 4x4
+    )
+
+    input_shape = (img_height, img_width, input_channels)
+    #
+    base_model = tf.keras.applications.MobileNetV2(input_shape=input_shape, include_top=False)
+    # Encoder layers
+    layers = [base_model.get_layer(name).output for name in layer_names]
+    # Encoder model
+    down_stack = tf.keras.Model(inputs=base_model.input, outputs=layers)
+    down_stack.trainable = False
+
+    # Inputs
+    inputs = tf.keras.layers.Input(shape=input_shape)
+    x = inputs
+
+    # Downsampling
+    skips = down_stack(x)
+    x = skips[-1]
+    skips = reversed(skips[:-1])
+
+    # Decoder layers
+    up_stack = [up_sample(512, 3),  # 4x4 -> 8x8
+                up_sample(256, 3),  # 8x8 -> 16x16
+                up_sample(128, 3),  # 16x16 -> 32x32
+                up_sample(64, 3),  # 32x32 -> 64x64
+                ]
+
+    # Upsampling and setting skip-connections
+    for up, skip in zip(up_stack, skips):
+        x = up(x)
+        concat = tf.keras.layers.Concatenate()
+        x = concat([x, skip])
+
+    output_layer = tf.keras.layers.Conv2DTranspose(output_channels, FILTER_SIZE, strides=2, padding='same',
+                                                   activation='softmax')  # 64x64 -> 128x128
+    x = output_layer(x)
+
+    model = tf.keras.Model(inputs=inputs, outputs=x)
+    model.save('unet_mobile_v2.h5')
 
 
 def convert_cnn(model_path, model_format):
