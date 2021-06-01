@@ -20,7 +20,7 @@ else:
     from src.data_processing import data_preprocess_test
 
 
-def decode_img(img_path, img_height, img_width, num_channels):
+def read_test_img(img_path, img_height, img_width, num_channels):
     """ Reads and converts images
 
     Args:
@@ -62,7 +62,7 @@ def model_predict(model_path, img_path, img_height, img_width, num_channels, cla
     # load model
     model = load_model(model_path)
     # preprocess path of image
-    img = decode_img(img_path, img_width, img_height, num_channels)
+    img = read_test_img(img_path, img_width, img_height, num_channels)
     # predict one image
     prediction = model.predict(img)
 
@@ -70,8 +70,34 @@ def model_predict(model_path, img_path, img_height, img_width, num_channels, cla
         # returns the name of the predicted class
         predicted_class = class_names[np.argmax(prediction, 1)[0]]
         return predicted_class
+
+    elif class_names == 'segmentation':
+        img = tf.reshape(img, (128, 128, 3))
+        mask = np.argmax(prediction, axis=-1)
+        mask = np.expand_dims(mask, axis=-1)
+
+        return img, mask[0]
+
     else:
         return prediction
+
+
+def plot_segmentation_mask(model_path, img_path, img_height, img_width, num_channels):
+
+    img, mask = model_predict(model_path, img_path, img_height, img_width, num_channels, class_names='segmentation')
+
+    plt.figure(figsize=(15, 15))
+
+    display_list = (img, mask)
+    title = ['Input Image', 'Predicted Mask']
+
+    for i in range(len(display_list)):
+        plt.subplot(1, len(display_list), i + 1)
+        plt.title(title[i])
+        plt.imshow(tf.keras.preprocessing.image.array_to_img(display_list[i]))
+        plt.axis('off')
+    plt.show()
+    plt.savefig('predicted_mask.png')
 
 
 def confusion_matrix_generate(y_true, y_pred, class_names, normalize=False):
