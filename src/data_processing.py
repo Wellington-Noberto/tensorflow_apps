@@ -42,7 +42,7 @@ def read_image(file_path, num_channels):
 
 
 def process_img(img, img_height, img_width):
-    """ converts and resize images
+    """ Converts and resize images
 
     Args:
         img (tf.image): Input image
@@ -51,10 +51,10 @@ def process_img(img, img_height, img_width):
     Returns:
         img (tf.image): Image after preprocessing
     """
-    # Use `convert_image_dtype` to convert to floats in the [0,1] range.
-    img = tf.image.convert_image_dtype(img, tf.float32)
     # resize the image to the desired size.
     img = tf.image.resize(img, [img_height, img_width])
+    # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+    img = tf.image.convert_image_dtype(img, tf.float32)
 
     return img
 
@@ -62,14 +62,16 @@ def process_img(img, img_height, img_width):
 def process_mask(img, img_height, img_width):
     """ converts and resize mask images
 
-        Args:
-            img (tf.image): Input image
-            img_height (int): Image height
-            img_width (int): Image width
-        Returns:
-            img (tf.image): Image mask after preprocessing
+    Args:
+        img (tf.image): Input image
+        img_height (int): Image height
+        img_width (int): Image width
+    Returns:
+        img (tf.image): Image mask after preprocessing
     """
+    #
     img = tf.image.resize(img, [img_height, img_width])
+    #img = tf.image.convert_image_dtype(img, tf.uint8)
     # initial class marked as 0
     img -= 1
 
@@ -100,7 +102,6 @@ def load_images(file_path, class_names, img_height, img_width, num_channels):
 
 def load_images_segmentation(dataset, img_height, img_width):
     """
-
     Args:
         dataset (dict):
         img_height (int): Image height
@@ -248,8 +249,11 @@ def data_preprocess_segmentation(input_path, img_height, img_width, batch_size, 
     if tfrecord:
         dataset, info = tfds.load(input_path, with_info=True)
 
-        num_training_steps = info.splits['train'].num_examples
-        num_test_steps = info.splits['test'].num_examples
+        train_image_count = info.splits['train'].num_examples
+        test_image_count = info.splits['test'].num_examples
+
+        num_training_steps = train_image_count // batch_size
+        num_test_steps = test_image_count // test_batch_size
 
     else:
         # Class names based on the directory structure
@@ -280,7 +284,8 @@ def data_preprocess_segmentation(input_path, img_height, img_width, batch_size, 
 
     train = dataset['train'].map(lambda input_images: load_images_segmentation(input_images, img_height, img_width),
                                  num_parallel_calls=AUTOTUNE)
-    test = dataset['test'].map(lambda input_images: load_images_segmentation(input_images, img_height, img_width))
+    test = dataset['test'].map(lambda input_images: load_images_segmentation(input_images, img_height, img_width),
+                               num_parallel_calls=AUTOTUNE)
 
     train_batches = prepare_for_training(train, batch_size, augment)
     test_batches = test.batch(test_batch_size)

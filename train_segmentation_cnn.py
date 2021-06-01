@@ -29,7 +29,7 @@ def main():
                 args['epochs'],
                 num_training_steps,
                 num_test_steps,
-                sparse_loss=True)
+                segmentation=True)
 
 
 if __name__ == '__main__':

@@ -32,7 +32,7 @@ def main():
                 val_batches,
                 num_training_steps,
                 num_val_steps,
-                sparse_loss=False)
+                segmentation=False)
 
 
 if __name__ == '__main__':

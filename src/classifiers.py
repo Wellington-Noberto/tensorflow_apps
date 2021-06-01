@@ -37,7 +37,7 @@ def keras_callbacks(model_path):
     return my_callbacks
 
 
-def train_model(model_path, train_data, validation_batches, epochs, num_training_steps, num_val_steps, sparse_loss):
+def train_model(model_path, train_data, validation_batches, epochs, num_training_steps, num_val_steps, segmentation):
     """ Trains the CNN model
 
     Args:
@@ -47,10 +47,11 @@ def train_model(model_path, train_data, validation_batches, epochs, num_training
         validation_batches (tf.Dataset): Batches of validation images
         num_training_steps (int): Number of training steps per epoch
         num_val_steps (int): Number of steps during validation
-        sparse_loss (bool):
+        segmentation (bool):
     """
     model = tf.keras.models.load_model(model_path)
-    if sparse_loss:
+    if segmentation:
+        # ToDo: apply new callbacks
         loss = 'sparse_categorical_crossentropy'
     else:
         loss = 'categorical_crossentropy'
