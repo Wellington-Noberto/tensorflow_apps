@@ -68,8 +68,19 @@ def train_model(model_path, train_data, validation_batches, epochs, num_training
               )
 
 
-def get_model(img_size, num_classes):
+def unet_functional(img_height, img_width, num_classes):
+    """ Generates an unet model
 
+    Args:
+        img_height (int): Image height
+        img_width (int): Image width
+        num_classes (int): Number of classes
+
+    Returns:
+
+    """
+
+    img_size = (img_height, img_width)
     inputs = Input(shape=img_size + (3,))
 
     ### [First half of the network: downsampling inputs] ###
@@ -166,8 +177,8 @@ def up_sample(filters, filter_size, norm_type='batchnorm', apply_dropout=False):
 def unet_mobilenet(img_height, img_width, input_channels, output_channels):
     """
     Args:
-        img_height:
-        img_width:
+        img_height (int): Image height
+        img_width (int): Image width
         input_channels:
         output_channels:
 

@@ -50,7 +50,7 @@ def model_predict(model_path, img_path, img_height, img_width, num_channels, cla
         class_names (list of str): List of classes
 
     Returns:
-
+        prediction
     """
     # load model
     model = load_model(model_path)
@@ -60,9 +60,8 @@ def model_predict(model_path, img_path, img_height, img_width, num_channels, cla
     prediction = model.predict(img)
 
     if class_names is None:
-        # returns the name of the predicted class
-        predicted_class = class_names[np.argmax(prediction, 1)[0]]
-        return predicted_class
+
+        return prediction
 
     elif class_names == 'segmentation':
         img = tf.reshape(img, (128, 128, 3))
@@ -73,10 +72,24 @@ def model_predict(model_path, img_path, img_height, img_width, num_channels, cla
         return img, mask[0]
 
     else:
-        return prediction
+        # returns the name of the predicted class
+        predicted_class = class_names[np.argmax(prediction, 1)[0]]
+
+        return predicted_class
 
 
 def plot_segmentation_mask(model_path, img_path, img_height, img_width, num_channels):
+    """ Generates a mask
+    Args:
+        model_path (tf.h5): CNN model to be trained
+        img_path (str): Path to the image. Preferably .jpg or .png
+        img_height (int): Image height
+        img_width (int): Image width
+        num_channels (int): Number of channels on the images
+
+    Returns:
+
+    """
 
     img, mask = model_predict(model_path, img_path, img_height, img_width, num_channels, class_names='segmentation')
 
@@ -91,8 +104,9 @@ def plot_segmentation_mask(model_path, img_path, img_height, img_width, num_chan
         plt.imshow(tf.keras.preprocessing.image.array_to_img(display_list[i]))
         plt.axis('off')
 
-    plt.savefig('predicted_mask.png')
-    plt.show()
+    output_img_path = 'predicted_mask.png'
+    plt.savefig(output_img_path)
+    print('Image saved as', output_img_path)
 
 
 def confusion_matrix_generate(y_true, y_pred, class_names, normalize=False):
