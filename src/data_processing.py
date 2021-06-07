@@ -51,10 +51,10 @@ def process_img(img, img_height, img_width):
     Returns:
         img (tf.image): Image after preprocessing
     """
-    # resize the image to the desired size.
-    img = tf.image.resize(img, [img_height, img_width])
     # Use `convert_image_dtype` to convert to floats in the [0,1] range.
     img = tf.image.convert_image_dtype(img, tf.float32)
+    # resize the image to the desired size.
+    img = tf.image.resize(img, [img_height, img_width])
 
     return img
 

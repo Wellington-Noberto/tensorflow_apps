@@ -8,7 +8,6 @@ from keras.layers import add, Conv2D, BatchNormalization, Activation, SeparableC
     UpSampling2D
 
 import coremltools
-from src.data_io import split_images
 
 
 def keras_callbacks(model_path):
@@ -24,7 +23,7 @@ def keras_callbacks(model_path):
         my_callbacks (list of callbacks): List of callbacks
     """
     run_logdir = os.path.join('logs', time.strftime("run_%Y_%m_%d-%H_%M_%S"))
-    best_model = model_path[:-3] + '{epoch:02d}-{val_loss:.2f}.h5'
+    best_model = model_path[:-3] + 'best.h5'
     # ModelCheckpoint
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(best_model, monitor='val_loss', save_best_only=True)
     # Early Stopping
@@ -70,6 +69,7 @@ def train_model(model_path, train_data, validation_batches, epochs, num_training
 
 
 def get_model(img_size, num_classes):
+
     inputs = Input(shape=img_size + (3,))
 
     ### [First half of the network: downsampling inputs] ###

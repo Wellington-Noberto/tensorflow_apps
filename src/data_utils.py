@@ -1,23 +1,16 @@
 import os
-import sys
+
 import tensorflow as tf
 from keras.models import load_model
 
 import numpy as np
 import pandas as pd
-
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.metrics import confusion_matrix, classification_report
 
-
-if __name__ == '__main__':
-    from data_processing import data_preprocess_test
-else:
-    PACKAGE_PARENT = '...'
-    SCRIPT_DIR = os.path.join(os.getcwd(), PACKAGE_PARENT)
-    sys.path.append(SCRIPT_DIR)
-    from src.data_processing import data_preprocess_test
+from src.data_processing import data_preprocess_test
 
 
 def read_test_img(img_path, img_height, img_width, num_channels):
@@ -73,7 +66,8 @@ def model_predict(model_path, img_path, img_height, img_width, num_channels, cla
 
     elif class_names == 'segmentation':
         img = tf.reshape(img, (128, 128, 3))
-        mask = np.argmax(prediction, axis=-1)
+
+        mask = tf.argmax(prediction, axis=-1)
         mask = np.expand_dims(mask, axis=-1)
 
         return img, mask[0]
@@ -96,8 +90,9 @@ def plot_segmentation_mask(model_path, img_path, img_height, img_width, num_chan
         plt.title(title[i])
         plt.imshow(tf.keras.preprocessing.image.array_to_img(display_list[i]))
         plt.axis('off')
-    plt.show()
+
     plt.savefig('predicted_mask.png')
+    plt.show()
 
 
 def confusion_matrix_generate(y_true, y_pred, class_names, normalize=False):
